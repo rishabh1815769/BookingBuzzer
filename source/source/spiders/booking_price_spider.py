@@ -4,6 +4,9 @@ import scrapy
 import requests
 import json
 import os
+import logging
+
+logging.getLogger('scrapy').setLevel(logging.WARNING)
 
 
 class BookingPriceSpider(scrapy.Spider):
