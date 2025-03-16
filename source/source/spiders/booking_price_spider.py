@@ -2,6 +2,8 @@ from pathlib import Path
 from scrapy_playwright.page import PageMethod
 import scrapy
 import requests
+import json
+import os
 
 
 class BookingPriceSpider(scrapy.Spider):
@@ -44,11 +46,24 @@ class BookingPriceSpider(scrapy.Spider):
             return False
     
     def start_requests(self):
-        urls = [
-            "https://www.booking.com/Share-SNzpVA",
-            "https://www.booking.com/Share-YEFeTW",
-            "https://www.booking.com/Share-Ip64xnj"
-        ]
+        # Path to the JSON file containing URLs to track
+        json_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hotel_to_track.json')
+        
+        try:
+            with open(json_file_path, 'r') as f:
+                data = json.load(f)
+                urls = data.get('urls', [])
+                
+            if not urls:
+                self.logger.error("No URLs found in hotel_to_track.json")
+                return
+                
+            self.logger.info(f"Loaded {len(urls)} URLs from configuration file")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load URLs from JSON file: {str(e)}")
+            return
+            
         for url in urls:
             yield scrapy.Request(
                 url=url,
@@ -62,7 +77,6 @@ class BookingPriceSpider(scrapy.Spider):
                         """),
                         # Wait longer for page to fully load/process redirects
                         PageMethod("wait_for_load_state", "networkidle")
-                        #PageMethod("wait_for_timeout", 10000),
                     ],
                     playwright=True,
                     # Force Scrapy to process the page even after redirect
@@ -123,6 +137,5 @@ class BookingPriceSpider(scrapy.Spider):
         #message += f"\n<b>🔗 Link:</b> {response.url}"
         
         self.send_telegram_message(message)
-        
         
         yield {"price": price, "url": response.url, "status": response.status}
